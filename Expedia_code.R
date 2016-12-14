@@ -120,10 +120,14 @@ for(i in numeric.cols){
 }
 
 
-expedia[,2] = as.Date.default??(expedia[,2])
+expedia[,2] = strptime(expedia[,2], "%Y-%m-%d %H:%M:%S")
 
 
-
+      head(strptime(expedia[,2], "%Y/%m/%d %H:%M:%S"))
+      
+      head(as.Date(expedia[,2]),100)
+      
+      
 #country codes=================
 #range from 1 to 231 with 218 unique values. which 13 are missing?
 which(!seq(1:231) %in% (expedia$visitor_location_country_id))
@@ -370,6 +374,11 @@ ggplot(by_promo, mapping = aes(promotion_flag, booking_rate)) + geom_bar(stat = 
 barplot(table(expedia_US$position, expedia_US$booking_bool)[,2], main = "Bookings By Position in Search Results")
 barplot(table(expedia_US$position, expedia_US$click_bool)[,2], main = "Clicks By Position in Search Results")
 
+#by date
+expedia_US[,2] = strptime(expedia_US[,2], "%Y-%m-%d %H:%M:%S")
+expedia_US[,2] = as.Date(expedia_US[,2])
+#look at the booking, clicking rate by month-date (year not necess?)
+
 
 ########################################
 ########################################
@@ -378,16 +387,16 @@ barplot(table(expedia_US$position, expedia_US$click_bool)[,2], main = "Clicks By
 
 # K-Means Cluster Analysis
 
-expedia_US %>%
-  group_by(srch_id) %>%
-  summarize(clicks = sum(click_bool),
-            bookings = sum(booking_bool),
-            hist_starrating = mean(visitor_hist_starrating),
-            hist_adr_usd = mean(visitor_hist_adr_usd),
-            prop_review_score = prop_review_score %>%
-  mutate(min_values = min(c)) %>%
-              
-  )
+# expedia_US %>%
+#   group_by(srch_id) %>%
+#   summarize(clicks = sum(click_bool),
+#             bookings = sum(booking_bool),
+#             hist_starrating = mean(visitor_hist_starrating),
+#             hist_adr_usd = mean(visitor_hist_adr_usd),
+#             prop_review_score = prop_review_score %>%
+#   mutate(min_values = min(c)) %>%
+#               
+#   )
 
 expedia_US_scaled = expedia_US[,c(5,6,19:24,53)]
 for(i in c(1:9)){
@@ -400,4 +409,4 @@ unique()
 
 expedia_US_scaled = as.data.frame(scale(expedia_US[,c(5,6,19:24,53)]))
 
-
+left_join!

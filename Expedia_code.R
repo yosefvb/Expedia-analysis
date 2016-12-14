@@ -4,7 +4,7 @@ library(ggplot2)
 
 # Expedia data ======================================================================
 setwd("~/R Workspace/Expedia/data/")
-expedia = read.csv("train.csv", stringsAsFactors = F)
+expedia = read.csv("train.csv")
 names(expedia)
 # [1] "srch_id"                     "date_time"                   "site_id"                    
 # [4] "visitor_location_country_id" "visitor_hist_starrating"     "visitor_hist_adr_usd"       
@@ -120,14 +120,14 @@ for(i in numeric.cols){
 }
 
 
-expedia[,2] = strptime(expedia[,2], "%Y-%m-%d %H:%M:%S")
+expedia_US[,2] = strptime(expedia_US[,2], "%Y-%m-%d %H:%M:%S")
+head(strptime(expedia_US[,2], "%m/%d"))
+
+head(strptime(expedia[,2], "%Y/%m/%d %H:%M:%S"))
+
+head(as.Date(expedia[,2]),100)
 
 
-      head(strptime(expedia[,2], "%Y/%m/%d %H:%M:%S"))
-      
-      head(as.Date(expedia[,2]),100)
-      
-      
 #country codes=================
 #range from 1 to 231 with 218 unique values. which 13 are missing?
 which(!seq(1:231) %in% (expedia$visitor_location_country_id))
@@ -195,7 +195,7 @@ plot(expedia$visitor_location_country_id)
 # $ booking_bool               : Factor w/ 2 levels "0","1": 1 1 1 1 1 1 1 1 1 1 ...
 
 
-  
+
 booked = expedia %>% select(gross_bookings_usd, booking_bool) %>% filter(booking_bool == 1)
 
 histogram(expedia$price_usd)
@@ -324,7 +324,7 @@ clicks_num =
 
 #booking rate by search window
 booking_rate_by_srch_window =
-expedia_US %>%
+  expedia_US %>%
   select(srch_id, booking_bool, srch_booking_window) %>%
   group_by(srch_booking_window) %>%
   summarize(count = n(), avg_booking_rate = mean(booking_bool)) %>%
@@ -398,7 +398,16 @@ expedia_US[,2] = as.Date(expedia_US[,2])
 #               
 #   )
 
-expedia_US_scaled = expedia_US[,c(5,6,19:24,53)]
+# dummify columns
+#  
+
+expedia_US_scaled = expedia_US %>%
+  select(5,6,19:24,53) %>%
+  group_by(srch_id) %>%
+  
+
+
+
 for(i in c(1:9)){
   expedia_US_scaled[,i] = as.numeric(as.character(expedia_US_scaled[,i]))
   print(paste("Applying as.factor to column", i))
@@ -410,3 +419,4 @@ unique()
 expedia_US_scaled = as.data.frame(scale(expedia_US[,c(5,6,19:24,53)]))
 
 left_join!
+  

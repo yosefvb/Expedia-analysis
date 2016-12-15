@@ -1,7 +1,6 @@
 library(dplyr)
 library(ggplot2)
 
-
 # Expedia data ======================================================================
 setwd("~/R Workspace/Expedia/data/")
 expedia = read.csv("train.csv")
@@ -106,16 +105,20 @@ names(expedia)
 
 factor.cols = c(3:4,7:11,15,17,21:22,24,27,28:29,31:32,34:35,37:38,40:41,43:44,46:47,49:50)
 numeric.cols = c(1,5,6,12:13,14,16,18,19,20,23,25:26,30,33,36,39,42,45,48,51:54)
+
+factor.cols2 = c(3:4,7:8,15,17,27,28:29,31:32,34:35,37:38,40:41,43:44,46:47,49:50)
+numeric.cols2 = c(1,5,6,9:13,14,16,18,19:24,23,25:26,30,33,36,39,42,45,48,51:54)
+
 # Double check - 8,18
 
-for(i in factor.cols){
+for(i in factor.cols2){
   expedia[,i] = as.factor(expedia[,i])
   print(paste("Applying as.factor to column", i))
   print(Sys.time())
 }
-for(i in numeric.cols){
+for(i in numeric.cols2){
   expedia[,i] = as.numeric(as.character(expedia[,i]))
-  print(paste("Applying as.factor to column", i))
+  print(paste("Applying as.numeric(as.character()) to column", i))
   print(Sys.time())
 }
 
@@ -387,36 +390,216 @@ expedia_US[,2] = as.Date(expedia_US[,2])
 
 # K-Means Cluster Analysis
 
-# expedia_US %>%
-#   group_by(srch_id) %>%
-#   summarize(clicks = sum(click_bool),
-#             bookings = sum(booking_bool),
-#             hist_starrating = mean(visitor_hist_starrating),
-#             hist_adr_usd = mean(visitor_hist_adr_usd),
-#             prop_review_score = prop_review_score %>%
-#   mutate(min_values = min(c)) %>%
-#               
-#   )
+names(expedia_US)
 
-# dummify columns
-#  
-
-expedia_US_scaled = expedia_US %>%
-  select(5,6,19:24,53) %>%
+kmean_data =
+expedia_US %>%
   group_by(srch_id) %>%
-  
+  summarize(clicks = sum(click_bool),
+            bookings = sum(booking_bool),
+            hist_starrating = mean(visitor_hist_starrating, na.rm = T),
+            hist_adr_usd = mean(visitor_hist_adr_usd, na.rm = T),
+            srch_length_of_stay = mean(srch_length_of_stay),
+            srch_booking_window = mean(srch_booking_window),
+            srch_adults_count = mean(srch_adults_count),
+            srch_children_count = mean(srch_children_count),       
+            srch_room_count = mean(srch_room_count), 
+            srch_saturday_night_bool = mean(srch_saturday_night_bool),
+            prop_starrating = prop_starrating[which.max(booking_bool)], #chosen randomly when all booking_bool==0
+            hotel_price = price_usd[which.max(booking_bool)],
+            gross_bookings_usd = gross_bookings_usd[which.max(booking_bool)]  
+            #hotel_price = price_usd[which(booking_bool == 1)])
+  )
+
+str(kmean_data)
+
+# feature engineering ===================
+#srch_length_of_stay
+table(kmean_data$srch_length_of_stay)
+plot(log(head(table(kmean_data$srch_length_of_stay),20)))
+#changing into 1,2,3-5,6+
+kmean_data =
+  mutate(ifelse())
+
+#booking_window
+table(kmean_data$srch_booking_window)
+plot((head(table(kmean_data$srch_booking_window),100)))
+#changing into 0-1, 2-6,7-13,14-30,30+ (easier just 0-1, 2-6,7+)
+
+#adults
+table(kmean_data$srch_adults_count)
+plot(table(kmean_data$srch_adults_count))
+#changing into 1,2,3+ (although 4 has more than 3 and 6 has more than 5, pairs)
+
+#children
+table(kmean_data$srch_children_count)
+plot(table(kmean_data$srch_children_count))
+#changing into 0,1-2,3+ (should really do 0,1+ to capture the very diff behavior between those 2 groups)
+
+#roomcount
+table(kmean_data$srch_room_count)
+plot(table(kmean_data$srch_room_count))
+#link to the adults?
+table(kmean_data$srch_room_count, kmean_data$srch_adults_count)
+
+#Sat
+table(kmean_data$srch_saturday_night_bool)
+
+#stars
+table(kmean_data$prop_starrating)
+plot(table(kmean_data$prop_starrating))
+#need to impute the 0 value!
+#1,2,3,4,5
+
+#price
+hist(table(kmean_data$hotel_price), xlim = c(0,100), breaks = 1000)
+hist(table(expedia_US$price_usd), xlim = c(0,100), breaks = 100000)
+#not using since doesn't make sense - log?
+
+#bookings
+hist(kmean_data$gross_bookings_usd, xlim = c(0,500), breaks = 10000)
+#change to just website 5 to make sure not per night / whole trip
+
+#1 srch_id
+#2 clicks
+#3 bookings
+#4 hist_starrating 
+#5 hist_adr_usd
+#6 srch_length_of_stay 
+#7 srch_booking_window 
+#8 srch_adults_count 
+#9 srch_children_count     
+#10 srch_room_count 
+#11 srch_saturday_night_bool 
+#12 prop_starrating 
+#13 hotel_price
+#14 gross_bookings_usd
+
+kmean_data_scaled = kmean_data[,c(3,6:12)]
+
+names(kmean_data_scaled)
+# [1] "bookings"                 "srch_length_of_stay"      "srch_booking_window"      "srch_adults_count"       
+# [5] "srch_children_count"      "srch_room_count"          "srch_saturday_night_bool" "prop_starrating" 
+
+# length_of_stay_scaled
+kmean_data_scaled =
+  as.data.frame(
+    kmean_data_scaled %>%
+      mutate(
+        length_of_stay_scaled = ifelse(srch_length_of_stay == 1, 1,
+                        ifelse(srch_length_of_stay == 2, 2,
+                               ifelse((srch_length_of_stay > 2 & srch_length_of_stay < 6), 3, 4)))))
+kmean_data_scaled %>%
+  group_by(length_of_stay_scaled) %>%
+  summarize(mean(bookings))
+plot(expedia_US %>%
+  group_by(srch_length_of_stay) %>%
+  summarize(mean(booking_bool)))
+plot(expedia_US %>%
+       group_by(srch_length_of_stay) %>%
+       summarize(mean(click_bool)))
+plot(expedia_US %>%
+       group_by(len=srch_length_of_stay) %>%
+       summarize(avg=mean(gross_bookings_usd, na.rm =T)) %>%
+       mutate(gross_per_night = avg/len) %>%
+       select(-avg))
+
+
+#booking_window_scaled
+kmean_data_scaled =
+  as.data.frame(
+    kmean_data_scaled %>%
+      mutate(
+        booking_window_scaled = ifelse(srch_length_of_stay == 1, 1,
+                                       ifelse(srch_length_of_stay == 2, 2,
+                                              ifelse((srch_length_of_stay > 2 & srch_length_of_stay < 6), 3, 4)))))
 
 
 
-for(i in c(1:9)){
-  expedia_US_scaled[,i] = as.numeric(as.character(expedia_US_scaled[,i]))
-  print(paste("Applying as.factor to column", i))
+names(kmean_data_scaled)
+kmean_data_scaled[,9:12] <- NULL
+kmean_data_scaled[,c(1,9)] <- NULL
+
+
+summary(scale(kmean_data_scaled$length_of_stay_scaled))
+
+for(i in seq(1,7)){
+  kmean_data_scaled[,i] = scale(kmean_data_scaled[,i])
+  print(paste("Scaling column", i))
   print(Sys.time())
 }
-str(expedia_US_scaled)
-unique()
 
-expedia_US_scaled = as.data.frame(scale(expedia_US[,c(5,6,19:24,53)]))
+str(kmean_data_scaled)
+summary(kmean_data_scaled)
+sapply(kmean_data_scaled, sd)
 
-left_join!
-  
+plot(
+  kmean_data_scaled$srch_children_count, kmean_data_scaled$srch_length_of_stay
+)
+
+set.seed(0)
+km.iris = kmeans(kmean_data_scaled, centers = 3)
+#business travelers, couples, families
+#backpackers
+#millenials?/seniors?
+
+wssplot = function(data, nc = 8, seed = 0) {
+  wss = (nrow(data) - 1) * sum(apply(data, 2, var))
+  for (i in 2:nc) {
+    set.seed(seed)
+    wss[i] = sum(kmeans(data, centers = i, iter.max = 10, nstart = 10)$withinss)    # iter.max is 
+  }
+  plot(1:nc, wss, type = "b",
+       xlab = "Number of Clusters",
+       ylab = "Within-Cluster Variance",
+       main = "Scree Plot for the K-Means Procedure\n Expedia Clusters")
+}
+wssplot(kmean_data_scaled)
+
+#applying the cluster number to original data
+kmean_data$three_clustsv1 = km.iris[[1]]
+
+#grouped by cluster
+grouped.by.clust =
+as.data.frame(
+kmean_data %>%
+  group_by(three_clustsv1) %>%
+  summarize(book.rate = mean(bookings),
+            click.rate = mean(clicks),
+            prop_starrating = mean(prop_starrating),
+            hotel_price = mean(hotel_price, na.rm = T),
+            gross_bookings_usd = mean(gross_bookings_usd, na.rm=T),
+            hist_starrating = mean(hist_starrating, na.rm=T),
+            hist_adr_usd = mean(hist_adr_usd, na.rm=T),
+            srch_adults_count = mean(srch_adults_count),
+            srch_children_count = mean(srch_children_count),
+            srch_room_count = mean(srch_room_count),
+            srch_saturday_night_bool = mean(srch_saturday_night_bool),
+            srch_length_of_stay = mean(srch_length_of_stay),
+            srch_booking_window = mean(srch_booking_window)
+            )
+)
+
+#exploring a matrix (v)
+#the further a ratio is from 1, the more important that attribute is for a segment relative to the total population
+clust3.ratio.matrix =
+cbind(
+grouped.by.clust$book.rate/mean(kmean_data$bookings),
+grouped.by.clust$click.rate/mean(kmean_data$clicks),
+grouped.by.clust$prop_starrating/mean(kmean_data$prop_starrating),
+grouped.by.clust$hotel_price/mean(kmean_data$hotel_price),
+grouped.by.clust$gross_bookings_usd/mean(kmean_data$gross_bookings_usd, na.rm=T),
+grouped.by.clust$hist_starrating/mean(kmean_data$hist_starrating, na.rm=T),
+grouped.by.clust$hist_adr_usd/mean(kmean_data$hist_adr_usd, na.rm=T),
+grouped.by.clust$srch_adults_count/mean(kmean_data$srch_adults_count),
+grouped.by.clust$srch_children_count/mean(kmean_data$srch_children_count),
+grouped.by.clust$srch_room_count/mean(kmean_data$srch_room_count),
+grouped.by.clust$srch_saturday_night_bool/mean(kmean_data$srch_saturday_night_bool),
+grouped.by.clust$srch_length_of_stay/mean(kmean_data$srch_length_of_stay),
+grouped.by.clust$srch_booking_window/mean(kmean_data$srch_booking_window)
+)
+
+
+
+
+
